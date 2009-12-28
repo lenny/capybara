@@ -1,4 +1,7 @@
 module Capybara
+  
+  class TimeoutError < RuntimeError; end
+  
   class Session
     include Searchable
     
@@ -38,63 +41,63 @@ module Capybara
     end
 
     def click(locator)
-      link = wait_for(XPath.link(locator).button(locator))
+      link = find_with_wait(XPath.link(locator).button(locator))
       raise Capybara::ElementNotFound, "no link or button '#{locator}' found" unless link
       link.click
     end
 
     def click_link(locator)
-      link = wait_for(XPath.link(locator))
+      link = find_with_wait(XPath.link(locator))
       raise Capybara::ElementNotFound, "no link with title, id or text '#{locator}' found" unless link
       link.click
     end
 
     def click_button(locator)
-      button = wait_for(XPath.button(locator))
+      button = find_with_wait(XPath.button(locator))
       raise Capybara::ElementNotFound, "no button with value or id or text '#{locator}' found" unless button
       button.click
     end
 
     def drag(source_locator, target_locator)
-      source = wait_for(source_locator)
+      source = find_with_wait(source_locator)
       raise Capybara::ElementNotFound, "drag source '#{source_locator}' not found on page" unless source
-      target = wait_for(target_locator)
+      target = find_with_wait(target_locator)
       raise Capybara::ElementNotFound, "drag target '#{target_locator}' not found on page" unless target
       source.drag_to(target)
     end
 
     def fill_in(locator, options={})
-      field = wait_for(XPath.fillable_field(locator))
+      field = find(XPath.fillable_field(locator), :wait => true)
       raise Capybara::ElementNotFound, "cannot fill in, no text field, text area or password field with id or label '#{locator}' found" unless field
       field.set(options[:with])
     end
 
     def choose(locator)
-      field = wait_for(XPath.radio_button(locator))
+      field = find_with_wait(XPath.radio_button(locator))
       raise Capybara::ElementNotFound, "cannot choose field, no radio button with id or label '#{locator}' found" unless field
       field.set(true)
     end
 
     def check(locator)
-      field = wait_for(XPath.checkbox(locator))
+      field = find_with_wait(XPath.checkbox(locator))
       raise Capybara::ElementNotFound, "cannot check field, no checkbox with id or label '#{locator}' found" unless field
       field.set(true)
     end
 
     def uncheck(locator)
-      field = wait_for(XPath.checkbox(locator))
+      field = find_with_wait(XPath.checkbox(locator))
       raise Capybara::ElementNotFound, "cannot uncheck field, no checkbox with id or label '#{locator}' found" unless field
       field.set(false)
     end
 
     def select(value, options={})
-      field = wait_for(XPath.select(options[:from]))
+      field = find_with_wait(XPath.select(options[:from]))
       raise Capybara::ElementNotFound, "cannot select option, no select box with id or label '#{options[:from]}' found" unless field
       field.select(value)
     end
 
     def attach_file(locator, path)
-      field = wait_for(XPath.file_field(locator))
+      field = find_with_wait(XPath.file_field(locator))
       raise Capybara::ElementNotFound, "cannot attach file, no file field with id or label '#{locator}' found" unless field
       field.set(path)
     end
@@ -106,7 +109,7 @@ module Capybara
     def within(kind, scope=nil)
       kind, scope = Capybara.default_selector, kind unless scope
       scope = XPath.from_css(scope) if kind == :css
-      raise Capybara::ElementNotFound, "scope '#{scope}' not found on page" unless wait_for(scope)
+      raise Capybara::ElementNotFound, "scope '#{scope}' not found on page" unless find_with_wait(scope)
       scopes.push(scope)
       yield
       scopes.pop
@@ -129,23 +132,21 @@ module Capybara
       Capybara::SaveAndOpenPage.save_and_open_page(body)
     end
 
-    def wait_for(locator)
-      wait_until { find(locator) }
-    end
-  
     def wait_for_condition(script)
       wait_until { evaluate_script(script) }
     end
 
     def wait_until
       return yield unless driver.wait?
+      
       10.times do
         if result = yield
           return result
         end
         sleep(0.1)
       end
-      nil
+      
+      raise TimeoutError
     end
     
     def evaluate_script(script)
@@ -154,6 +155,10 @@ module Capybara
 
   private
 
+    def find_with_wait(locator)
+      find(locator, :wait => driver.wait?)
+    end
+    
     def all_unfiltered(locator)
       XPath.wrap(locator).scope(current_scope).paths.map do |path|
         driver.find(path)

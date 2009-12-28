@@ -17,9 +17,20 @@ module Capybara
     def has_css?(path, options={})
       has_xpath?(XPath.from_css(path), options)
     end
-
+    
     def find(locator, options = {})
-      all(locator, options).first
+      
+      if options[:wait] == true
+        10.times do
+          if result = all(locator, options).first
+            return result
+          end
+          sleep(0.1)
+        end
+      else 
+        all(locator, options).first
+      end
+      
     end
      
     def find_field(locator)
