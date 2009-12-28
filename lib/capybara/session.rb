@@ -41,27 +41,27 @@ module Capybara
     end
 
     def click(locator)
-      link = find_with_wait(XPath.link(locator).button(locator))
+      link = autowait_find(XPath.link(locator).button(locator))
       raise Capybara::ElementNotFound, "no link or button '#{locator}' found" unless link
       link.click
     end
 
     def click_link(locator)
-      link = find_with_wait(XPath.link(locator))
+      link = autowait_find(XPath.link(locator))
       raise Capybara::ElementNotFound, "no link with title, id or text '#{locator}' found" unless link
       link.click
     end
 
     def click_button(locator)
-      button = find_with_wait(XPath.button(locator))
+      button = autowait_find(XPath.button(locator))
       raise Capybara::ElementNotFound, "no button with value or id or text '#{locator}' found" unless button
       button.click
     end
 
     def drag(source_locator, target_locator)
-      source = find_with_wait(source_locator)
+      source = autowait_find(source_locator)
       raise Capybara::ElementNotFound, "drag source '#{source_locator}' not found on page" unless source
-      target = find_with_wait(target_locator)
+      target = autowait_find(target_locator)
       raise Capybara::ElementNotFound, "drag target '#{target_locator}' not found on page" unless target
       source.drag_to(target)
     end
@@ -73,31 +73,31 @@ module Capybara
     end
 
     def choose(locator)
-      field = find_with_wait(XPath.radio_button(locator))
+      field = autowait_find(XPath.radio_button(locator))
       raise Capybara::ElementNotFound, "cannot choose field, no radio button with id or label '#{locator}' found" unless field
       field.set(true)
     end
 
     def check(locator)
-      field = find_with_wait(XPath.checkbox(locator))
+      field = autowait_find(XPath.checkbox(locator))
       raise Capybara::ElementNotFound, "cannot check field, no checkbox with id or label '#{locator}' found" unless field
       field.set(true)
     end
 
     def uncheck(locator)
-      field = find_with_wait(XPath.checkbox(locator))
+      field = autowait_find(XPath.checkbox(locator))
       raise Capybara::ElementNotFound, "cannot uncheck field, no checkbox with id or label '#{locator}' found" unless field
       field.set(false)
     end
 
     def select(value, options={})
-      field = find_with_wait(XPath.select(options[:from]))
+      field = autowait_find(XPath.select(options[:from]))
       raise Capybara::ElementNotFound, "cannot select option, no select box with id or label '#{options[:from]}' found" unless field
       field.select(value)
     end
 
     def attach_file(locator, path)
-      field = find_with_wait(XPath.file_field(locator))
+      field = autowait_find(XPath.file_field(locator))
       raise Capybara::ElementNotFound, "cannot attach file, no file field with id or label '#{locator}' found" unless field
       field.set(path)
     end
@@ -109,7 +109,7 @@ module Capybara
     def within(kind, scope=nil)
       kind, scope = Capybara.default_selector, kind unless scope
       scope = XPath.from_css(scope) if kind == :css
-      raise Capybara::ElementNotFound, "scope '#{scope}' not found on page" unless find_with_wait(scope)
+      raise Capybara::ElementNotFound, "scope '#{scope}' not found on page" unless autowait_find(scope)
       scopes.push(scope)
       yield
       scopes.pop
@@ -155,8 +155,9 @@ module Capybara
 
   private
 
-    def find_with_wait(locator)
-      find(locator, :wait => driver.wait?)
+    def autowait_find(locator)
+      autowait = Capybara.autowait? && driver.wait? 
+      find(locator, :wait => autowait)
     end
     
     def all_unfiltered(locator)

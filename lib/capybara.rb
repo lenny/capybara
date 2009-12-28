@@ -11,8 +11,12 @@ module Capybara
 
   class << self
     attr_accessor :debug, :asset_root, :app_host
-    attr_writer :default_selector
-
+    attr_writer :default_selector, :autowait
+    
+    def autowait? 
+      @autowait != false
+    end
+    
     def default_selector
       @default_selector ||= :xpath
     end
